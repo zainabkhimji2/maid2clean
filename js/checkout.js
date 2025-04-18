@@ -1,0 +1,176 @@
+// Initialize cart from localStorage
+let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+// Display cart items on page load
+document.addEventListener('DOMContentLoaded', function() {
+    renderCartItems();
+});
+
+function renderCartItems() {
+    const cartItemsContainer = document.getElementById('cart-items');
+    const emptyCartMessage = document.getElementById('empty-cart-message');
+    const orderSummary = document.getElementById('order-summary');
+    const checkoutForm = document.getElementById('checkout-form');
+    
+    // Clear existing items
+    cartItemsContainer.innerHTML = '';
+    
+    if (cart.length === 0) {
+        emptyCartMessage.classList.remove('hidden');
+        orderSummary.classList.add('hidden');
+        checkoutForm.classList.add('hidden');
+        return;
+    }
+
+    // Render each cart item
+    cart.forEach((item, index) => {
+        const itemElement = document.createElement('div');
+        itemElement.className = 'flex items-center justify-between py-4 border-b border-gray-200 transition-all duration-300';
+        itemElement.innerHTML = `
+            <div class="flex items-center">
+                <img src="${item.image || 'https://via.placeholder.com/80'}" alt="${item.name}" class="w-16 h-16 object-contain rounded">
+                <div class="ml-4">
+                    <h3 class="text-lg font-medium text-gray-900">${item.name}</h3>
+                    <p class="text-gray-600">$${item.price.toFixed(2)}</p>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <div class="flex items-center border border-gray-300 rounded">
+                    <button class="decrement-btn px-3 py-1 text-gray-600 hover:bg-gray-100" data-index="${index}">-</button>
+                    <span class="quantity px-3" data-index="${index}">${item.quantity}</span>
+                    <button class="increment-btn px-3 py-1 text-gray-600 hover:bg-gray-100" data-index="${index}">+</button>
+                </div>
+                <button class="remove-btn ml-6 text-red-500 hover:text-red-700" data-index="${index}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            </div>
+        `;
+        cartItemsContainer.appendChild(itemElement);
+    });
+
+    // Setup event listeners for quantity buttons
+    setupQuantityButtons();
+    updateTotals();
+}
+
+function setupQuantityButtons() {
+    // Increment quantity
+    document.querySelectorAll('.increment-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = this.getAttribute('data-index');
+            cart[index].quantity++;
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateQuantityDisplay(index);
+            updateTotals();
+        });
+    });
+
+    // Decrement quantity
+    document.querySelectorAll('.decrement-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = this.getAttribute('data-index');
+            if (cart[index].quantity > 1) {
+                cart[index].quantity--;
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateQuantityDisplay(index);
+                updateTotals();
+            }
+        });
+    });
+
+    // Remove item
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = this.getAttribute('data-index');
+            removeItem(index);
+        });
+    });
+}
+
+function updateQuantityDisplay(index) {
+    const quantitySpan = document.querySelector(`.quantity[data-index="${index}"]`);
+    if (quantitySpan) {
+        quantitySpan.textContent = cart[index].quantity;
+    }
+}
+
+// Enhanced cart item removal with animation
+function removeItem(index) {
+    const itemElement = document.querySelector(`[data-index="${index}"]`).closest('div.flex');
+    itemElement.classList.add('opacity-0', 'translate-x-4');
+    
+    setTimeout(() => {
+        cart.splice(index, 1);
+        localStorage.setItem('cart', JSON.stringify(cart));
+        renderCartItems(); // Re-render the cart after removal
+        showToast('Item removed from cart');
+    }, 300);
+}
+
+function updateTotals() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const shipping = subtotal > 50 ? 0 : 5.99; // Free shipping over $50
+    const tax = subtotal * 0.08; // 8% tax
+    const total = subtotal + shipping + tax;
+
+    document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('shipping').textContent = shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`;
+    document.getElementById('tax').textContent = `$${tax.toFixed(2)}`;
+    document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+}
+
+// Form submission with modal
+function submitOrder(e) {
+    e.preventDefault();
+    
+    // Get form data
+    const formData = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        address: document.getElementById('address').value,
+        payment: document.querySelector('input[name="payment"]:checked').value,
+        cart: cart,
+        total: document.getElementById('total').textContent
+    };
+
+    // Show confirmation modal
+    const modal = document.getElementById('confirmation-modal');
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.querySelector('div').classList.remove('scale-95');
+    
+    // In a real app, you would send the form data to your backend here
+    console.log('Order submitted:', formData);
+
+    // Clear cart after successful order
+    localStorage.removeItem('cart');
+    cart = [];
+
+    // Redirect to home page after delay
+    setTimeout(() => {
+        window.location.href = "index.html";
+    }, 3000);
+}
+
+function closeModal() {
+    const modal = document.getElementById('confirmation-modal');
+    modal.querySelector('div').classList.add('scale-95');
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    setTimeout(() => {
+        window.location.href = "index.html";
+    }, 300);
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-teal-600 text-white px-4 py-2 rounded shadow-lg animate-fadeIn';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
