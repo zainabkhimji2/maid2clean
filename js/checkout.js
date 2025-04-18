@@ -4,6 +4,7 @@ let cart = JSON.parse(localStorage.getItem('cart')) || [];
 // Display cart items on page load
 document.addEventListener('DOMContentLoaded', function() {
     renderCartItems();
+    setupEventListeners();
 });
 
 function renderCartItems() {
@@ -22,15 +23,20 @@ function renderCartItems() {
         return;
     }
 
+    emptyCartMessage.classList.add('hidden');
+    orderSummary.classList.remove('hidden');
+    checkoutForm.classList.remove('hidden');
+
     // Render each cart item
     cart.forEach((item, index) => {
         const itemElement = document.createElement('div');
         itemElement.className = 'flex items-center justify-between py-4 border-b border-gray-200 transition-all duration-300';
         itemElement.innerHTML = `
             <div class="flex items-center">
-                <img src="${item.image || 'https://via.placeholder.com/80'}" alt="${item.name}" class="w-16 h-16 object-contain rounded">
+                <img src="${item.image || './images/logo.png'}" alt="${item.name}" class="w-16 h-16 object-contain rounded">
                 <div class="ml-4">
                     <h3 class="text-lg font-medium text-gray-900">${item.name}</h3>
+                    ${item.isPackage ? '<span class="text-xs text-blue-500">Cleaning Package</span>' : ''}
                     <p class="text-gray-600">$${item.price.toFixed(2)}</p>
                 </div>
             </div>
@@ -50,63 +56,60 @@ function renderCartItems() {
         cartItemsContainer.appendChild(itemElement);
     });
 
-    // Setup event listeners for quantity buttons
-    setupQuantityButtons();
     updateTotals();
 }
 
-function setupQuantityButtons() {
-    // Increment quantity
-    document.querySelectorAll('.increment-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = this.getAttribute('data-index');
-            cart[index].quantity++;
-            localStorage.setItem('cart', JSON.stringify(cart));
-            updateQuantityDisplay(index);
-            updateTotals();
-        });
-    });
+function setupEventListeners() {
+    // Use event delegation for all cart buttons
+    document.addEventListener('click', function(e) {
+        const index = e.target.closest('[data-index]')?.getAttribute('data-index');
+        if (index === null || index === undefined) return;
 
-    // Decrement quantity
-    document.querySelectorAll('.decrement-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = this.getAttribute('data-index');
+        if (e.target.classList.contains('increment-btn') || e.target.closest('.increment-btn')) {
+            cart[index].quantity++;
+            updateCart();
+        }
+        else if (e.target.classList.contains('decrement-btn') || e.target.closest('.decrement-btn')) {
             if (cart[index].quantity > 1) {
                 cart[index].quantity--;
-                localStorage.setItem('cart', JSON.stringify(cart));
-                updateQuantityDisplay(index);
-                updateTotals();
+                updateCart();
             }
-        });
-    });
-
-    // Remove item
-    document.querySelectorAll('.remove-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = this.getAttribute('data-index');
+        }
+        else if (e.target.classList.contains('remove-btn') || e.target.closest('.remove-btn')) {
             removeItem(index);
-        });
+        }
     });
-}
 
-function updateQuantityDisplay(index) {
-    const quantitySpan = document.querySelector(`.quantity[data-index="${index}"]`);
-    if (quantitySpan) {
-        quantitySpan.textContent = cart[index].quantity;
+    // Form submission
+    const checkoutForm = document.getElementById('checkout-form');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', submitOrder);
+    }
+
+    // Modal close
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeModal);
     }
 }
 
-// Enhanced cart item removal with animation
+function updateCart() {
+    localStorage.setItem('cart', JSON.stringify(cart));
+    renderCartItems();
+    showToast('Cart updated');
+}
+
 function removeItem(index) {
-    const itemElement = document.querySelector(`[data-index="${index}"]`).closest('div.flex');
-    itemElement.classList.add('opacity-0', 'translate-x-4');
-    
-    setTimeout(() => {
-        cart.splice(index, 1);
-        localStorage.setItem('cart', JSON.stringify(cart));
-        renderCartItems(); // Re-render the cart after removal
-        showToast('Item removed from cart');
-    }, 300);
+    const itemElement = document.querySelector(`[data-index="${index}"]`)?.closest('div.flex');
+    if (itemElement) {
+        itemElement.classList.add('opacity-0', 'translate-x-4');
+        
+        setTimeout(() => {
+            cart.splice(index, 1);
+            updateCart();
+            showToast('Item removed from cart');
+        }, 300);
+    }
 }
 
 function updateTotals() {
@@ -121,30 +124,30 @@ function updateTotals() {
     document.getElementById('total').textContent = `$${total.toFixed(2)}`;
 }
 
-// Form submission with modal
 function submitOrder(e) {
     e.preventDefault();
     
-    // Get form data
     const formData = {
         name: document.getElementById('name').value,
         email: document.getElementById('email').value,
         phone: document.getElementById('phone').value,
         address: document.getElementById('address').value,
-        payment: document.querySelector('input[name="payment"]:checked').value,
+        payment: document.querySelector('input[name="payment"]:checked')?.value,
         cart: cart,
         total: document.getElementById('total').textContent
     };
 
     // Show confirmation modal
     const modal = document.getElementById('confirmation-modal');
-    modal.classList.remove('opacity-0', 'pointer-events-none');
-    modal.querySelector('div').classList.remove('scale-95');
+    if (modal) {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modal.querySelector('div').classList.remove('scale-95');
+    }
     
-    // In a real app, you would send the form data to your backend here
+    // In a real app, send data to backend here
     console.log('Order submitted:', formData);
 
-    // Clear cart after successful order
+    // Clear cart
     localStorage.removeItem('cart');
     cart = [];
 
@@ -156,11 +159,13 @@ function submitOrder(e) {
 
 function closeModal() {
     const modal = document.getElementById('confirmation-modal');
-    modal.querySelector('div').classList.add('scale-95');
-    modal.classList.add('opacity-0', 'pointer-events-none');
-    setTimeout(() => {
-        window.location.href = "index.html";
-    }, 300);
+    if (modal) {
+        modal.querySelector('div').classList.add('scale-95');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            window.location.href = "index.html";
+        }, 300);
+    }
 }
 
 function showToast(message) {
@@ -174,3 +179,35 @@ function showToast(message) {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+
+
+// Initialize EmailJS
+(function() {
+    emailjs.init('0ptvi9tgOXwhyd0Lr');
+  })();
+  
+  function SendMail(event) {
+    event.preventDefault();
+    
+    const submitBtn = document.getElementById('button');
+    const form = document.getElementById('checkout-form');
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
+  
+    // Prepare email data
+    const templateParams = {
+      from_name: document.getElementById('name').value,
+      from_email: document.getElementById('email').value,
+      phone_number: document.getElementById('phone').value || 'Not provided',
+      subject: document.getElementById('address').value,
+      date: new Date().toLocaleString()
+    };
+  
+    // Send email with complete handling
+    emailjs.send('service_1sdufzt', 'template_9vqtn4p', templateParams).then(alert('Email sent successfully!'))
+  }
+

@@ -52,29 +52,33 @@ function setupMobileMenu() {
   }
 }
 
+
 // Cart Functionality
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
+// Update the updateCartCount function to handle both cases
 function updateCartCount() {
-  const cartCount = document.getElementById('cartCount');
-  if (cartCount) {
-    const count = cart.reduce(function(sum, item) {
-      return sum + (item.quantity || 0);
-    }, 0);
-    cartCount.textContent = count;
-    cartCount.classList.toggle('scale-125', count > 0);
+  const cartCountElements = document.querySelectorAll('#cartCount');
+  const count = cart.reduce(function(sum, item) {
+    return sum + (item.quantity || 0);
+  }, 0);
+  
+  cartCountElements.forEach(element => {
+    element.textContent = count;
+    element.classList.toggle('scale-125', count > 0);
     if (count > 0) {
-      cartCount.classList.add('animate-bounce');
+      element.classList.add('animate-bounce');
       setTimeout(function() {
-        cartCount.classList.remove('animate-bounce');
+        element.classList.remove('animate-bounce');
       }, 500);
     }
-  }
+  });
 }
 
-function addToCart(name, price, id = null, image = null) {
+// addToCart function
+function addToCart(name, price, id = null, image = null, isPackage = false) {
   const existingItem = cart.find(function(item) {
-    return item.name === name;
+    return item.id === id;
   });
 
   if (existingItem) {
@@ -85,12 +89,23 @@ function addToCart(name, price, id = null, image = null) {
       price: price, 
       quantity: 1,
       id: id,
-      image: image
+      image: image || './images/logo.png', // Default logo for packages
+      isPackage: isPackage
     });
   }
 
   localStorage.setItem('cart', JSON.stringify(cart));
   updateCartCount();
+  
+  // Show confirmation with option to checkout for packages
+  if (isPackage && confirm(`${name} added to cart!\n\nGo to checkout now?`)) {
+    window.location.href = 'checkout.html';
+  }
+}
+
+// Add specific function for packages
+function addPackageToCart(name, price, id) {
+  addToCart(name, price, id, null, true);
 }
 
 function setupCartButtons() {
@@ -167,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
       id: 1,
       name: "Super Softener",
       image: "./images/liquid1.png",
-      description: "Self-wringing spin mop with microfiber head for superior cleaning",
+      description: "Self-wringing spin mop with microfiber head for superior",
       price: "$29.99",
       rating: 5,
       reviews: 128,
@@ -388,23 +403,36 @@ document.getElementById('view-more-deals')?.addEventListener('click', function()
     }, 100);
   }
 });
+// Pricing toggle functionality
 document.addEventListener('DOMContentLoaded', function() {
   const pricingToggle = document.getElementById('pricingToggle');
   const monthlyPrices = [9.99, 29.99, 49.99];
   const yearlyPrices = monthlyPrices.map(price => (price * 12 * 0.85).toFixed(2)); // 15% discount
   
-  pricingToggle.addEventListener('change', function() {
+  if (pricingToggle) {
+    pricingToggle.addEventListener('change', function() {
       const priceAmounts = document.querySelectorAll('.price-amount');
       const pricePeriods = document.querySelectorAll('.price-period');
       
       priceAmounts.forEach((el, index) => {
-          const price = this.checked ? yearlyPrices[index] : monthlyPrices[index];
-          el.textContent = `$${price}`;
+        const price = this.checked ? yearlyPrices[index] : monthlyPrices[index];
+        el.textContent = `$${price}`;
       });
       
       pricePeriods.forEach(el => {
-          el.textContent = this.checked ? '/year' : '/month';
+        el.textContent = this.checked ? '/year' : '/month';
       });
+    });
+  }
+
+  // Set up package buttons
+  document.querySelectorAll('.pricing-button').forEach(button => {
+    button.addEventListener('click', function() {
+      const packageName = this.dataset.name;
+      const packagePrice = parseFloat(this.dataset.price);
+      const packageId = this.dataset.id;
+      addPackageToCart(packageName, packagePrice, packageId);
+    });
   });
 });
 
@@ -473,6 +501,7 @@ function setupSmoothScrolling() {
 }
 
 // Initialize all functions when DOM is loaded
+// Initialize all functions when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
   initSwiper();
   setupNavbarScroll();
@@ -484,4 +513,9 @@ document.addEventListener('DOMContentLoaded', function() {
   setupSubscribeForm();
   setupAnimations();
   setupSmoothScrolling();
+  
+  // Load cart and display if on checkout page
+  if (window.location.pathname.includes('checkout.html')) {
+    displayCartItems();
+  }
 });

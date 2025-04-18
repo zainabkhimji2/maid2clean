@@ -34,7 +34,7 @@ animation-play-state: paused;
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
   }
   .navbar-scrolled {
-    background-color: rgba(0, 119, 182, 0.98);
+    background-color: rgba(32, 64, 151, 0.98);
     backdrop-filter: blur(12px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   }
