@@ -74,60 +74,84 @@ function updateCartCount() {
     }
   });
 }
+// Add these at the top of your cart functionality section
+const cartNotification = document.createElement('div');
+cartNotification.id = 'cartNotification';
+cartNotification.className = 'cart-notification';
+cartNotification.innerHTML = `
+  <svg class="checkmark" viewBox="0 0 24 24">
+    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+  </svg>
+  <span id="notificationText"></span>
+`;
+document.body.appendChild(cartNotification);
+
+function showNotification(message) {
+  const notification = document.getElementById('cartNotification');
+  const notificationText = document.getElementById('notificationText');
+  notificationText.textContent = message;
+  notification.classList.add('show');
+  setTimeout(() => notification.classList.remove('show'), 3000);
+}
 
 // addToCart function
 function addToCart(name, price, id = null, image = null, isPackage = false) {
-  const existingItem = cart.find(function(item) {
-    return item.id === id;
-  });
+  // Generate unique ID if not provided
+  const itemId = id || `${name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`;
+  
+  const existingItem = cart.find(item => item.id === itemId);
 
   if (existingItem) {
-    existingItem.quantity = (existingItem.quantity || 0) + 1;
+    existingItem.quantity += 1;
   } else {
     cart.push({ 
-      name: name, 
-      price: price, 
+      name: name,
+      price: parseFloat(price),
       quantity: 1,
-      id: id,
-      image: image || './images/logo.png', // Default logo for packages
+      id: itemId,
+      image: image || './images/logo.png',
       isPackage: isPackage
     });
   }
 
   localStorage.setItem('cart', JSON.stringify(cart));
   updateCartCount();
-  
-  // Show confirmation with option to checkout for packages
-  if (isPackage && confirm(`${name} added to cart!\n\nGo to checkout now?`)) {
-    window.location.href = 'checkout.html';
+  showNotification(`${name} added to cart!`);
+
+  // Remove the confirm dialog for packages
+  if (isPackage) {
+    setTimeout(() => {
+      window.location.href = 'checkout.html';
+    }, 1000);
   }
 }
 
-// Add specific function for packages
-function addPackageToCart(name, price, id) {
-  addToCart(name, price, id, null, true);
-}
 
 function setupCartButtons() {
-  // For "Grab Deal" buttons in deals section
-  document.querySelectorAll('.add-to-cart').forEach(function(button) {
-    button.addEventListener('click', function() {
+  // Use event delegation for dynamically added buttons
+  document.addEventListener('click', function(e) {
+    const button = e.target.closest('.add-to-cart');
+    if (button) {
+      e.preventDefault();
       const name = button.dataset.name;
-      const price = parseFloat(button.dataset.price) || 0;
-      addToCart(name, price);
-      
+      const price = button.dataset.price;
+      const id = button.dataset.id;
+
       // Visual feedback
       const originalHTML = button.innerHTML;
       button.innerHTML = '<svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added';
       button.classList.add('bg-green-500');
-      setTimeout(function() {
+      
+      setTimeout(() => {
         button.innerHTML = originalHTML.includes('Grab') ? 'Grab Deal' : 'Add to Cart';
         button.classList.remove('bg-green-500');
       }, 1500);
-    });
+
+      addToCart(name, price, id);
+    }
   });
 
-  // For "Buy Now" buttons in products section
+  // Update Buy Now buttons
   document.addEventListener('click', function(e) {
     if (e.target.closest('.buy-now-btn')) {
       e.preventDefault();
@@ -140,28 +164,15 @@ function setupCartButtons() {
       const image = productCard.querySelector('img').src;
       
       addToCart(name, price, id, image);
-      
-      // Redirect to checkout page
-      window.location.href = 'checkout.html';
+      showNotification(`${name} added to cart!`);
+      setTimeout(() => {
+        window.location.href = 'checkout.html';
+      }, 1000);
     }
   });
 }
 
-// Search Functionality
-function setupSearch() {
-  const searchInput = document.getElementById('searchInput');
-  if (searchInput) {
-    let searchTimeout;
-    searchInput.addEventListener('input', function() {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(function() {
-        const query = searchInput.value.toLowerCase();
-        console.log('Searching for:', query);
-        // Implement actual search functionality here
-      }, 300);
-    });
-  }
-}
+
 
 // Marquee functionality
 function setupMarquee() {
@@ -503,17 +514,23 @@ function setupSmoothScrolling() {
 // Initialize all functions when DOM is loaded
 // Initialize all functions when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize cart from localStorage
+  cart = JSON.parse(localStorage.getItem('cart')) || [];
+  
+  // Initial cart count update
+  updateCartCount();
+
+  // Rest of your initialization code
   initSwiper();
   setupNavbarScroll();
   setupMobileMenu();
   setupCartButtons();
-  updateCartCount();
   setupSearch();
   setupMarquee();
   setupSubscribeForm();
   setupAnimations();
   setupSmoothScrolling();
-  
+
   // Load cart and display if on checkout page
   if (window.location.pathname.includes('checkout.html')) {
     displayCartItems();

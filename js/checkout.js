@@ -184,7 +184,7 @@ function showToast(message) {
 
 // Initialize EmailJS
 (function() {
-    emailjs.init('0ptvi9tgOXwhyd0Lr');
+    emailjs.init('ojLsDsUFEr7AvxogL');
   })();
   
   function SendMail(event) {
@@ -208,6 +208,6 @@ function showToast(message) {
     };
   
     // Send email with complete handling
-    emailjs.send('service_1sdufzt', 'template_9vqtn4p', templateParams).then(alert('Email sent successfully!'))
+    emailjs.send('service_zxwz8zk', 'template_mrh9kf5', templateParams).then(alert('Email sent successfully!'))
   }
 

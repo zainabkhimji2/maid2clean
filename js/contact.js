@@ -1,6 +1,6 @@
 // Initialize EmailJS
 (function() {
-  emailjs.init('0ptvi9tgOXwhyd0Lr');
+  emailjs.init('ojLsDsUFEr7AvxogL');
 })();
 
 function SendMail(event) {
@@ -25,6 +25,6 @@ function SendMail(event) {
   };
 
   // Send email with complete handling
-  emailjs.send('service_1sdufzt', 'template_9ip3nlg', templateParams).then(alert('Email sent successfully!'))
+  emailjs.send('service_zxwz8zk', 'template_3456btj', templateParams).then(alert('Email sent successfully!'))
 }
 
